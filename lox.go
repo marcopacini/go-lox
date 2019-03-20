@@ -57,28 +57,21 @@ func run(source string) error {
 		return err
 	}
 
-	// debug
-	for _, token := range tokens {
-		fmt.Println(token)
-	}
+	//	for _, token := range tokens {
+	//		fmt.Println(token)
+	//	}
 
 	p := ast.Parser{Tokens: tokens}
 
-	expr, err := p.Parse()
+	stmts, err := p.Parse()
 	if err != nil {
 		return err
 	}
 
-	// debug
-	fmt.Println(expr)
-
 	i := ast.Interpreter{}
-	l, err := i.Evaluate(expr)
 
-	if err != nil {
+	if err = i.Run(stmts); err != nil {
 		fmt.Println(err)
-	} else {
-		fmt.Println(l)
 	}
 
 	/*

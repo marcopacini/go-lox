@@ -1,0 +1,78 @@
+package ast
+
+type Stmt interface {
+	Accept(StmtVisitor) error
+}
+
+type StmtVisitor interface {
+	visitBlock(Stmt) error
+	visitDeclaration(Stmt) error
+	visitForStmt(Stmt) error
+	visitIfStmt(Stmt) error
+	visitExprStmt(Stmt) error
+	visitPrintStmt(Stmt) error
+	visitWhileStmt(Stmt) error
+}
+
+type Block struct {
+	Stmts []Stmt
+}
+
+func (b Block) Accept(visitor StmtVisitor) error {
+	return visitor.visitBlock(b)
+}
+
+type Declaration struct {
+	Token
+	Expr
+}
+
+func (d Declaration) Accept(visitor StmtVisitor) error {
+	return visitor.visitDeclaration(d)
+}
+
+type ForStmt struct {
+	Init      Stmt
+	Condition Expr
+	Increment Expr
+	Body      Stmt
+}
+
+func (f ForStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitForStmt(f)
+}
+
+type IfStmt struct {
+	Condition Expr
+	Then      Stmt
+	Else      Stmt
+}
+
+func (i IfStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitIfStmt(i)
+}
+
+type ExprStmt struct {
+	Expr
+}
+
+func (e ExprStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitExprStmt(e)
+}
+
+type PrintStmt struct {
+	Expr
+}
+
+func (p PrintStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitPrintStmt(p)
+}
+
+type WhileStmt struct {
+	Condition Expr
+	Body      Stmt
+}
+
+func (w WhileStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitWhileStmt(w)
+}

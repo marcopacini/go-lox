@@ -1,1 +1,14 @@
-"Hello" + ", " +  "World!" == "Hello, World!"
+var x = 10;
+
+if (x + 1 > 10 and true)
+    print "Greater!";
+
+var i = 1;
+while (i <= 3) {
+    print i;
+    i = i + 1;
+}
+
+for (var j = 0; j < 3; j = j + 1) {
+    print j;
+}

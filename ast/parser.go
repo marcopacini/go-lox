@@ -59,8 +59,263 @@ func (p *Parser) consume(t TokenType) (Token, error) {
 	return token, nil
 }
 
+func (p *Parser) declaration() (Stmt, error) {
+	if p.match(Var) {
+		return p.variable()
+	}
+
+	return p.statement()
+}
+
+func (p *Parser) variable() (Stmt, error) {
+	token, err := p.consume(Identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	var initializer Expr
+	if p.match(Equal) {
+		if initializer, err = p.expression(); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := p.consume(Semicolon); err != nil {
+		return nil, err
+	}
+
+	return Declaration{token, initializer}, nil
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(If) {
+		if _, err := p.consume(LeftParenthesis); err != nil {
+			return nil, err
+		}
+
+		condition, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(RightParenthesis); err != nil {
+			return nil, err
+		}
+
+		thenBranch, err := p.statement()
+		if err != nil {
+			return nil, err
+		}
+
+		var elseBranch Stmt
+		if p.match(Else) {
+			if elseBranch, err = p.statement(); err != nil {
+				return nil, err
+			}
+		}
+
+		return IfStmt{condition, thenBranch, elseBranch}, nil
+	}
+
+	if p.match(Print) {
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(Semicolon); err != nil {
+			return nil, err
+		}
+
+		return PrintStmt{expr}, nil
+	}
+
+	if p.match(For) {
+		if _, err := p.consume(LeftParenthesis); err != nil {
+			return nil, err
+		}
+
+		var init Stmt
+		var err error
+
+		if p.match(Semicolon) {
+			init = nil
+		} else if p.match(Var) {
+			init, err = p.variable()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			expr, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+
+			init = ExprStmt{expr}
+		}
+
+		var condition Expr
+
+		if p.peek().TokenType != Semicolon {
+			condition, err = p.expression()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if _, err := p.consume(Semicolon); err != nil {
+			return nil, err
+		}
+
+		var increment Expr
+
+		if p.peek().TokenType != RightParenthesis {
+			increment, err = p.expression()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if _, err := p.consume(RightParenthesis); err != nil {
+			return nil, err
+		}
+
+		body, err := p.statement()
+		if err != nil {
+			return nil, err
+		}
+
+		return ForStmt{init, condition, increment, body}, nil
+	}
+
+	if p.match(While) {
+		if _, err := p.consume(LeftParenthesis); err != nil {
+			return nil, err
+		}
+
+		condition, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(RightParenthesis); err != nil {
+			return nil, err
+		}
+
+		body, err := p.statement()
+		if err != nil {
+			return nil, err
+		}
+
+		return WhileStmt{condition, body}, nil
+	}
+
+	if p.match(LeftSquare) {
+		b, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+
+		return Block{b}, nil
+	}
+
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := p.consume(Semicolon); err != nil {
+		return nil, err
+	}
+
+	return ExprStmt{expr}, nil
+}
+
+func (p *Parser) block() ([]Stmt, error) {
+	var stmts []Stmt
+
+	for !(p.peek().TokenType == RightSquare) && !p.isEnd() {
+		stmt, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+
+		stmts = append(stmts, stmt)
+	}
+
+	if _, err := p.consume(RightSquare); err != nil {
+		return nil, err
+	}
+
+	return stmts, nil
+}
+
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.or()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(Equal) {
+		if t, ok := p.previous(); ok {
+			value, err := p.assignment()
+			if err != nil {
+				return nil, err
+			}
+
+			if v, ok := expr.(Variable); ok {
+				return Assign{v, t, value}, nil
+			}
+
+			return nil, fmt.Errorf("error at line %d: invalid assignment target", t.Line)
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) or() (Expr, error) {
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(Or) {
+		if operator, ok := p.previous(); ok {
+			right, err := p.and()
+			if err != nil {
+				return nil, err
+			}
+
+			expr = Logical{expr, operator, right}
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) and() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(And) {
+		if operator, ok := p.previous(); ok {
+			right, err := p.equality()
+			if err != nil {
+				return nil, err
+			}
+
+			expr = Logical{expr, operator, right}
+		}
+	}
+
+	return expr, nil
 }
 
 func (p *Parser) equality() (Expr, error) {
@@ -188,6 +443,12 @@ func (p *Parser) primary() (Expr, error) {
 		}
 	}
 
+	if p.match(Identifier) {
+		if token, ok := p.previous(); ok {
+			return Variable{token}, nil
+		}
+	}
+
 	if p.match(LeftParenthesis) {
 		expr, err := p.expression()
 		if err != nil {
@@ -204,6 +465,16 @@ func (p *Parser) primary() (Expr, error) {
 	return nil, fmt.Errorf("error at line %d: unknown token '%s'", p.peek().Line, p.peek().Literal)
 }
 
-func (p *Parser) Parse() (Expr, error) {
-	return p.expression()
+func (p *Parser) Parse() ([]Stmt, error) {
+	var stmts []Stmt
+
+	for !p.isEnd() {
+		if stmt, err := p.declaration(); err != nil {
+			return nil, err
+		} else {
+			stmts = append(stmts, stmt)
+		}
+	}
+
+	return stmts, nil
 }
