@@ -117,19 +117,6 @@ func (p *Parser) statement() (Stmt, error) {
 		return IfStmt{condition, thenBranch, elseBranch}, nil
 	}
 
-	if p.match(Print) {
-		expr, err := p.expression()
-		if err != nil {
-			return nil, err
-		}
-
-		if _, err := p.consume(Semicolon); err != nil {
-			return nil, err
-		}
-
-		return PrintStmt{expr}, nil
-	}
-
 	if p.match(For) {
 		if _, err := p.consume(LeftParenthesis); err != nil {
 			return nil, err
@@ -186,6 +173,74 @@ func (p *Parser) statement() (Stmt, error) {
 		}
 
 		return ForStmt{init, condition, increment, body}, nil
+	}
+
+	if p.match(Fun) {
+		name, err := p.consume(Identifier)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(LeftParenthesis); err != nil {
+			return nil, err
+		}
+
+		var arguments []Token
+		if p.peek().TokenType != RightParenthesis {
+			for true {
+				token, err := p.consume(Identifier)
+				if err != nil {
+					return nil, err
+				}
+
+				arguments = append(arguments, token)
+
+				if !p.match(Comma) {
+					break
+				}
+			}
+		}
+
+		if _, err := p.consume(RightParenthesis); err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(LeftSquare); err != nil {
+			return nil, err
+		}
+
+		body, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+
+		return Function{name, nil, arguments, body}, nil
+	}
+
+	if p.match(Print) {
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(Semicolon); err != nil {
+			return nil, err
+		}
+
+		return PrintStmt{expr}, nil
+	}
+
+	if p.match(Return) {
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(Semicolon); err != nil {
+			return nil, err
+		}
+
+		return ReturnStmt{expr}, nil
 	}
 
 	if p.match(While) {
@@ -410,7 +465,44 @@ func (p *Parser) unary() (Expr, error) {
 		}
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() (Expr, error) {
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+
+	for true {
+		if p.match(LeftParenthesis) {
+			var arguments []Expr
+			if p.peek().TokenType != RightParenthesis {
+				for true {
+					argument, err := p.expression()
+					if err != nil {
+						return nil, err
+					}
+
+					arguments = append(arguments, argument)
+
+					if !p.match(Comma) {
+						break
+					}
+				}
+			}
+
+			if _, err := p.consume(RightParenthesis); err != nil {
+				return nil, err
+			}
+
+			return Call{expr, arguments}, nil
+		} else {
+			break
+		}
+	}
+
+	return expr, nil
 }
 
 func (p *Parser) primary() (Expr, error) {

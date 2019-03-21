@@ -5,13 +5,15 @@ type Stmt interface {
 }
 
 type StmtVisitor interface {
-	visitBlock(Stmt) error
-	visitDeclaration(Stmt) error
-	visitForStmt(Stmt) error
-	visitIfStmt(Stmt) error
-	visitExprStmt(Stmt) error
-	visitPrintStmt(Stmt) error
-	visitWhileStmt(Stmt) error
+	visitBlock(Block) error
+	visitDeclaration(Declaration) error
+	visitForStmt(ForStmt) error
+	visitFunction(Function) error
+	visitIfStmt(IfStmt) error
+	visitExprStmt(ExprStmt) error
+	visitPrintStmt(PrintStmt) error
+	visitReturnStmt(ReturnStmt) error
+	visitWhileStmt(WhileStmt) error
 }
 
 type Block struct {
@@ -60,12 +62,31 @@ func (e ExprStmt) Accept(visitor StmtVisitor) error {
 	return visitor.visitExprStmt(e)
 }
 
+type Function struct {
+	Name      Token
+	Closure   *Environment
+	Arguments []Token
+	Body      []Stmt
+}
+
+func (f Function) Accept(visitor StmtVisitor) error {
+	return visitor.visitFunction(f)
+}
+
 type PrintStmt struct {
 	Expr
 }
 
 func (p PrintStmt) Accept(visitor StmtVisitor) error {
 	return visitor.visitPrintStmt(p)
+}
+
+type ReturnStmt struct {
+	Expr
+}
+
+func (r ReturnStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitReturnStmt(r)
 }
 
 type WhileStmt struct {

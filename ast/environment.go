@@ -11,6 +11,19 @@ func NewEnvironment(parent *Environment) *Environment {
 	return &Environment{parent, make(map[string]interface{})}
 }
 
+func (e *Environment) Assign(variable Variable, expr Expr) error {
+	if _, ok := e.Scope[variable.Lexeme]; ok {
+		e.Scope[variable.Lexeme] = expr
+		return nil
+	}
+
+	if e.Parent != nil {
+		return e.Parent.Assign(variable, expr)
+	}
+
+	return fmt.Errorf("error at line %d: undefined variable %v", variable.Line, variable.Lexeme)
+}
+
 func (e Environment) Contains(variable Variable) bool {
 	if _, ok := e.Scope[variable.Lexeme]; ok {
 		return true
@@ -21,6 +34,11 @@ func (e Environment) Contains(variable Variable) bool {
 	}
 
 	return false
+}
+
+func (e *Environment) Declare(variable Variable, expr Expr) error {
+	e.Scope[variable.Lexeme] = expr
+	return nil
 }
 
 func (e Environment) Get(variable Variable, distance int) (interface{}, error) {
@@ -41,20 +59,6 @@ func (e Environment) Get(variable Variable, distance int) (interface{}, error) {
 	return nil, fmt.Errorf("error at line %d: undefined variable %v", variable.Line, variable.Lexeme)
 }
 
-func (e *Environment) Assign(variable Variable, expr Expr) error {
-	if _, ok := e.Scope[variable.Lexeme]; ok {
-		e.Scope[variable.Lexeme] = expr
-		return nil
-	}
-
-	if e.Parent != nil {
-		return e.Parent.Assign(variable, expr)
-	}
-
-	return fmt.Errorf("error at line %d: undefined variable %v", variable.Line, variable.Lexeme)
-}
-
-func (e *Environment) Declare(variable Variable, expr Expr) error {
-	e.Scope[variable.Lexeme] = expr
-	return nil
+func (e *Environment) Set(name string, callable Callable) {
+	e.Scope[name] = Literal{callable}
 }

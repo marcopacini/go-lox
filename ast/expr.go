@@ -10,13 +10,14 @@ type Expr interface {
 }
 
 type ExprVisitor interface {
-	visitAssign(Expr) error
-	visitBinary(Expr) error
-	visitGrouping(Expr) error
-	visitLiteral(Expr) error
-	visitLogical(Expr) error
-	visitUnary(Expr) error
-	visitVariable(Expr) error
+	visitAssign(Assign) error
+	visitBinary(Binary) error
+	visitCall(Call) error
+	visitGrouping(Grouping) error
+	visitLiteral(Literal) error
+	visitLogical(Logical) error
+	visitUnary(Unary) error
+	visitVariable(Variable) error
 }
 
 type Assign struct {
@@ -37,6 +38,15 @@ type Binary struct {
 
 func (b Binary) Accept(visitor ExprVisitor) error {
 	return visitor.visitBinary(b)
+}
+
+type Call struct {
+	Callee    Expr
+	Arguments []Expr
+}
+
+func (c Call) Accept(visitor ExprVisitor) error {
+	return visitor.visitCall(c)
 }
 
 type Grouping struct {

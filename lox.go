@@ -71,7 +71,7 @@ func run(source string) error {
 	i := ast.Interpreter{}
 
 	if err = i.Run(stmts); err != nil {
-		fmt.Println(err)
+		return err
 	}
 
 	/*
