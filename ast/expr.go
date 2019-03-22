@@ -13,9 +13,11 @@ type ExprVisitor interface {
 	visitAssign(Assign) error
 	visitBinary(Binary) error
 	visitCall(Call) error
+	visitGet(Get) error
 	visitGrouping(Grouping) error
 	visitLiteral(Literal) error
 	visitLogical(Logical) error
+	visitSet(Set) error
 	visitUnary(Unary) error
 	visitVariable(Variable) error
 }
@@ -47,6 +49,15 @@ type Call struct {
 
 func (c Call) Accept(visitor ExprVisitor) error {
 	return visitor.visitCall(c)
+}
+
+type Get struct {
+	Name   Token
+	Object Expr
+}
+
+func (g Get) Accept(visitor ExprVisitor) error {
+	return visitor.visitGet(g)
 }
 
 type Grouping struct {
@@ -109,6 +120,16 @@ type Logical struct {
 
 func (l Logical) Accept(visitor ExprVisitor) error {
 	return visitor.visitLogical(l)
+}
+
+type Set struct {
+	Object Expr
+	Name   Token
+	Value  Expr
+}
+
+func (s Set) Accept(visitor ExprVisitor) error {
+	return visitor.visitSet(s)
 }
 
 type Unary struct {

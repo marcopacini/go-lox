@@ -130,6 +130,12 @@ func (r *Resolver) visitCall(c Call) error {
 	return nil
 }
 
+func (r *Resolver) visitClassStmt(c ClassStmt) error {
+	r.Stack.Declare(c.Name.Lexeme)
+	r.Stack.Define(c.Name.Lexeme)
+	return nil
+}
+
 func (r *Resolver) visitDeclaration(d Declaration) error {
 	r.Stack.Declare(d.Lexeme)
 	if d.Expr != nil {
@@ -193,6 +199,10 @@ func (r *Resolver) visitFunction(f Function) error {
 	return nil
 }
 
+func (r *Resolver) visitGet(g Get) error {
+	return g.Object.Accept(r)
+}
+
 func (r *Resolver) visitGrouping(g Grouping) error {
 	if err := g.Expr.Accept(r); err != nil {
 		return err
@@ -249,6 +259,14 @@ func (r *Resolver) visitReturnStmt(s ReturnStmt) error {
 	}
 
 	return nil
+}
+
+func (r *Resolver) visitSet(s Set) error {
+	if err := s.Object.Accept(r); err != nil {
+		return nil
+	}
+
+	return s.Value.Accept(r)
 }
 
 func (r *Resolver) visitUnary(u Unary) error {

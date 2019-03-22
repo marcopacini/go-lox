@@ -88,6 +88,34 @@ func (p *Parser) variable() (Stmt, error) {
 }
 
 func (p *Parser) statement() (Stmt, error) {
+	if p.match(Class) {
+		token, err := p.consume(Identifier)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.consume(LeftSquare); err != nil {
+			return nil, err
+		}
+
+		var methods []Function
+		for p.peek().TokenType != RightSquare && !p.isEnd() {
+			f, err := p.function()
+			if err != nil {
+				return nil, err
+			}
+
+			m, _ := f.(Function)
+			methods = append(methods, m)
+		}
+
+		if _, err := p.consume(RightSquare); err != nil {
+			return nil, err
+		}
+
+		return ClassStmt{token, methods}, nil
+	}
+
 	if p.match(If) {
 		if _, err := p.consume(LeftParenthesis); err != nil {
 			return nil, err
@@ -176,45 +204,7 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 
 	if p.match(Fun) {
-		name, err := p.consume(Identifier)
-		if err != nil {
-			return nil, err
-		}
-
-		if _, err := p.consume(LeftParenthesis); err != nil {
-			return nil, err
-		}
-
-		var arguments []Token
-		if p.peek().TokenType != RightParenthesis {
-			for true {
-				token, err := p.consume(Identifier)
-				if err != nil {
-					return nil, err
-				}
-
-				arguments = append(arguments, token)
-
-				if !p.match(Comma) {
-					break
-				}
-			}
-		}
-
-		if _, err := p.consume(RightParenthesis); err != nil {
-			return nil, err
-		}
-
-		if _, err := p.consume(LeftSquare); err != nil {
-			return nil, err
-		}
-
-		body, err := p.block()
-		if err != nil {
-			return nil, err
-		}
-
-		return Function{name, nil, arguments, body}, nil
+		return p.function()
 	}
 
 	if p.match(Print) {
@@ -286,6 +276,48 @@ func (p *Parser) statement() (Stmt, error) {
 	return ExprStmt{expr}, nil
 }
 
+func (p *Parser) function() (Stmt, error) {
+	name, err := p.consume(Identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := p.consume(LeftParenthesis); err != nil {
+		return nil, err
+	}
+
+	var arguments []Token
+	if p.peek().TokenType != RightParenthesis {
+		for true {
+			token, err := p.consume(Identifier)
+			if err != nil {
+				return nil, err
+			}
+
+			arguments = append(arguments, token)
+
+			if !p.match(Comma) {
+				break
+			}
+		}
+	}
+
+	if _, err := p.consume(RightParenthesis); err != nil {
+		return nil, err
+	}
+
+	if _, err := p.consume(LeftSquare); err != nil {
+		return nil, err
+	}
+
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+
+	return Function{name, nil, arguments, body}, nil
+}
+
 func (p *Parser) block() ([]Stmt, error) {
 	var stmts []Stmt
 
@@ -324,6 +356,8 @@ func (p *Parser) assignment() (Expr, error) {
 
 			if v, ok := expr.(Variable); ok {
 				return Assign{v, t, value}, nil
+			} else if g, ok := expr.(Get); ok {
+				return Set{g.Object, g.Name, value}, nil
 			}
 
 			return nil, fmt.Errorf("error at line %d: invalid assignment target", t.Line)
@@ -497,6 +531,13 @@ func (p *Parser) call() (Expr, error) {
 			}
 
 			return Call{expr, arguments}, nil
+		} else if p.match(Dot) {
+			property, err := p.consume(Identifier)
+			if err != nil {
+				return nil, err
+			}
+
+			return Get{property, expr}, nil
 		} else {
 			break
 		}

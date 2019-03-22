@@ -43,6 +43,14 @@ func (f Function) Call(i *Interpreter, arguments []Expr) (Literal, error) {
 	return Literal{}, nil // void
 }
 
+func (c ClassStmt) Arity() int {
+	return 0
+}
+
+func (c ClassStmt) Call(i *Interpreter, arguments []Expr) (Literal, error) {
+	return c.CreateInstance(), nil
+}
+
 type Clock struct{}
 
 func (c Clock) Arity() int {

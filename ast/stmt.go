@@ -6,6 +6,7 @@ type Stmt interface {
 
 type StmtVisitor interface {
 	visitBlock(Block) error
+	visitClassStmt(ClassStmt) error
 	visitDeclaration(Declaration) error
 	visitForStmt(ForStmt) error
 	visitFunction(Function) error
@@ -22,6 +23,19 @@ type Block struct {
 
 func (b Block) Accept(visitor StmtVisitor) error {
 	return visitor.visitBlock(b)
+}
+
+type ClassStmt struct {
+	Name    Token
+	Methods []Function
+}
+
+func (c ClassStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitClassStmt(c)
+}
+
+func (c ClassStmt) CreateInstance() Literal {
+	return Literal{ClassInstance{c, make(map[string]Literal)}}
 }
 
 type Declaration struct {

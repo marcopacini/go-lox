@@ -191,22 +191,6 @@ func (i *Interpreter) visitBlock(b Block) error {
 	return nil
 }
 
-func (i *Interpreter) visitDeclaration(d Declaration) error {
-	i.Literal = Literal{nil}
-
-	if d.Expr != nil {
-		if _, err := i.Evaluate(d.Expr); err != nil {
-			return err
-		}
-	}
-
-	if err := i.Environment.Declare(Variable{d.Token}, i.Literal); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (i *Interpreter) visitCall(c Call) error {
 	callee, err := i.Evaluate(c.Callee)
 	if err != nil {
@@ -234,6 +218,26 @@ func (i *Interpreter) visitCall(c Call) error {
 		}
 
 		i.Literal = l
+	}
+
+	return nil
+}
+
+func (i *Interpreter) visitClassStmt(c ClassStmt) error {
+	return i.Environment.Declare(Variable{c.Name}, Literal{c})
+}
+
+func (i *Interpreter) visitDeclaration(d Declaration) error {
+	i.Literal = Literal{nil}
+
+	if d.Expr != nil {
+		if _, err := i.Evaluate(d.Expr); err != nil {
+			return err
+		}
+	}
+
+	if err := i.Environment.Declare(Variable{d.Token}, i.Literal); err != nil {
+		return err
 	}
 
 	return nil
@@ -313,6 +317,21 @@ func (i *Interpreter) visitPrintStmt(p PrintStmt) error {
 	return nil
 }
 
+func (i *Interpreter) visitGet(g Get) error {
+	l, err := i.Evaluate(g.Object)
+	if err != nil {
+		return nil
+	}
+
+	if obj, ok := l.Value.(ClassInstance); ok {
+		i.Literal = obj.Get(g.Name)
+	} else {
+		return fmt.Errorf("error at line %d: invalid property: %v", g.Name.Line, g.Name.Lexeme)
+	}
+
+	return nil
+}
+
 func (i *Interpreter) visitGrouping(g Grouping) error {
 	return g.Expr.Accept(i)
 }
@@ -370,6 +389,24 @@ func (i *Interpreter) visitReturnStmt(r ReturnStmt) error {
 	} else {
 		return ReturnValue{i.Literal}
 	}
+}
+
+func (i *Interpreter) visitSet(s Set) error {
+	l, err := i.Evaluate(s.Object)
+	if err != nil {
+		return nil
+	}
+
+	if obj, ok := l.Value.(ClassInstance); ok {
+		l, err := i.Evaluate(s.Value)
+		if err != nil {
+			return err
+		}
+
+		obj.Set(s.Name, l)
+	}
+
+	return nil
 }
 
 func (i *Interpreter) visitUnary(u Unary) error {
