@@ -2,20 +2,5 @@
 
 # go-lox
 > Yet another partial Lox implementation in Golang 
-#### Implementation Status
 
-- [x] Scanning
-- [x] Parsing Expressions
-- [x] Evaluating Expressions
-- [x] Statements and State
-- [x] Control Flow
-- [x] Functions
-- [x] Resolving and Binding
-- [ ] Classes
-  - [x] Class Declaration
-  - [x] Creating Instances
-  - [x] Properties on Instances
-  - [ ] Methods on Classes
-  - [ ] This
-  - [ ] Constructors and Initializers
-- [ ] Inheritance
+**Implementation Status:** [_Methods on Classes_](http://craftinginterpreters.com/classes.html#methods-on-classes)
